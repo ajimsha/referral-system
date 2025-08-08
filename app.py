@@ -48,15 +48,17 @@ def require_admin_api_key(f):
 # ======================================================
 # API 1 - Get referral JSON + Generate referral code
 # ======================================================
-@app.route("/api/referral-promote", methods=["GET"])
+@app.route("/api/referral-promote", methods=["POST"])
 @require_api_key
 def get_referral():
-    app_package_name = request.args.get("app_package_name")
-    username = request.args.get("username")
-    lang = request.args.get("lang")
-    user_id = request.args.get("user_id")
+    lang = request.args.get("lang")  # still from query param
 
-    if not all([app_package_name, username, lang, user_id]):
+    data_json = request.get_json(force=True)  # get JSON body
+    app_package_name = data_json.get("app_package_name")
+    username = data_json.get("username")
+    user_id = data_json.get("user_id")
+
+    if not all([app_package_name, username, user_id]) or not lang:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
 
     # Check if referral data exists in ReferralData
@@ -94,15 +96,17 @@ def get_referral():
 # ======================================================
 # API 2 - Referral referral-status
 # ======================================================
-@app.route("/api/referral-status", methods=["GET"])
+@app.route("/api/referral-status", methods=["POST"])
 @require_api_key
 def referral_stats():
-    app_package_name = request.args.get("app_package_name")
-    user_id = request.args.get("user_id")
-    username = request.args.get("username")
-    lang = request.args.get("lang")
+    lang = request.args.get("lang")  # still from query param
 
-    if not all([app_package_name, user_id, username, lang]):
+    data_json = request.get_json(force=True)  # get JSON body
+    app_package_name = data_json.get("app_package_name")
+    user_id = data_json.get("user_id")
+    username = data_json.get("username")
+
+    if not all([app_package_name, user_id, username]) or not lang:
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
     
     # Get redemption count (last redeem for the user)
@@ -153,12 +157,15 @@ def share_code(code):
 # ======================================================
 # API 4 - Redeem JSON
 # ======================================================
-@app.route("/api/referral-redeem", methods=["GET"])
+@app.route("/api/referral-redeem", methods=["POST"])
 @require_api_key
 def redeem_json():
-    app_package_name = request.args.get("app_package_name")
-    lang = request.args.get("lang")
-    user_id = request.args.get("user_id")
+    lang = request.args.get("lang")  # still query param
+
+    data_json = request.get_json(force=True)
+    app_package_name = data_json.get("app_package_name")
+    user_id = data_json.get("user_id")
+
     if not app_package_name:
         return jsonify({"status": "error", "message": "Missing app_package_name"}), 400
 
@@ -175,16 +182,19 @@ def redeem_json():
         }
     }), 200
 
+
 # ======================================================
 # API 5 - Check Redeem Code
 # ======================================================
-@app.route("/api/checkredeem", methods=["GET"])
+@app.route("/api/checkredeem", methods=["POST"])
 @require_api_key
 def check_redeem():
-    app_package_name = request.args.get("app_package_name")
-    code = request.args.get("code")
-    lang = request.args.get("lang")
-    user_id = request.args.get("user_id")
+    lang = request.args.get("lang")  # still query param
+
+    data_json = request.get_json(force=True)
+    app_package_name = data_json.get("app_package_name")
+    code = data_json.get("code")
+    user_id = data_json.get("user_id")
 
     if not all([app_package_name, code, user_id]):
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
@@ -220,6 +230,45 @@ def check_redeem():
         "message": "Code redeemed successfully"
     }), 200
 
+
+
+
+
+@app.route("/api/savereferraldata", methods=["POST"])
+@require_api_key
+def create_referral_data():
+    data = request.get_json(force=True)
+
+    app_package_name = data.get("app_package_name")
+    referral_json = data.get("referral_json", {})
+    is_active = data.get("is_active", True)
+
+    if not app_package_name:
+        return jsonify({"status": "error", "message": "app_package_name is required"}), 400
+
+    # Check if ReferralData for this app_package_name already exists
+    existing = ReferralData.objects(app_package_name=app_package_name).first()
+    if existing:
+        return jsonify({"status": "error", "message": "ReferralData already exists for this app_package_name"}), 409
+
+    referral_data = ReferralData(
+        app_package_name=app_package_name,
+        referral_json=referral_json,
+        is_active=is_active,
+        created_at=datetime.utcnow()
+    )
+    referral_data.save()
+
+    return jsonify({
+        "status": "success",
+        "message": "ReferralData created successfully",
+        "data": {
+            "app_package_name": app_package_name,
+            "referral_json": referral_json,
+            "is_active": is_active,
+            "created_at": referral_data.created_at.isoformat()
+        }
+    }), 201
 
 
 
