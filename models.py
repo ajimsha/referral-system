@@ -11,6 +11,7 @@ class ReferDetails(Document):
     app_package_name = StringField(required=True)
     user_id = StringField()
     user_name = StringField()
+    lang = StringField()
     code = StringField(required=True)
     redemptions = IntField(default=0) ## redeem count
     is_used = IntField(default=0)

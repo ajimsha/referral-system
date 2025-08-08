@@ -51,7 +51,7 @@ def require_admin_api_key(f):
 @app.route("/api/referral-promote", methods=["POST"])
 @require_api_key
 def get_referral():
-    lang = request.args.get("lang")  # still from query param
+    lang = request.args.get("lang") or "en"  # default to 'en' if missing
 
     data_json = request.get_json(force=True)  # get JSON body
     app_package_name = data_json.get("app_package_name")
@@ -62,9 +62,14 @@ def get_referral():
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
 
     # Check if referral data exists in ReferralData
-    data = ReferralData.objects(app_package_name=app_package_name, isActive=True).first()
-    if not data:
+
+    referral_data = ReferralData.objects(app_package_name=app_package_name,isActive=True).first()
+    if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
+    
+    page1_referralPromote = {}
+    if referral_data.referral_json:
+        page1_referralPromote = referral_data.referral_json.get(lang, {}).get("page1_referralPromote", {})
 
     # Check if the user already has a referral code in ReferDetails
     existing_redeem = ReferDetails.objects(app_package_name=app_package_name, user_id=user_id).first()
@@ -76,6 +81,7 @@ def get_referral():
         ReferDetails(
             app_package_name=app_package_name,
             user_id=user_id,
+            lang=lang,
             user_name=username,
             code=referral_code
         ).save()
@@ -86,7 +92,7 @@ def get_referral():
         "status": "success",
         "message": "Referral data fetched",
         "data": {
-            "referral_json": data.referral_json,
+            "page1_referralPromote": page1_referralPromote,
             "referral_code": referral_code,
             "referral_url": referral_url
         }
@@ -99,7 +105,7 @@ def get_referral():
 @app.route("/api/referral-status", methods=["POST"])
 @require_api_key
 def referral_stats():
-    lang = request.args.get("lang")  # still from query param
+    lang = request.args.get("lang") or "en"  # default to 'en' if missing
 
     data_json = request.get_json(force=True)  # get JSON body
     app_package_name = data_json.get("app_package_name")
@@ -117,7 +123,10 @@ def referral_stats():
     referral_data = ReferralData.objects(app_package_name=app_package_name).first()
     if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
-    page2_referral_status = referral_data.page2_referral_status if referral_data else {}
+   
+    page2_referral_status = {}
+    if referral_data.referral_json:
+        page2_referral_status = referral_data.referral_json.get(lang, {}).get("page2_referral_status", {})
 
     return jsonify({
         "status": "success",
@@ -141,10 +150,16 @@ def share_code(code):
     if not redeem:
         return jsonify({"status": "error", "message": "Invalid referral code"}), 404
 
+    lang = redeem.lang or "en"  # fetch lang from ReferDetails, default to 'en' if missing
+
     referral_data = ReferralData.objects(app_package_name=redeem.app_package_name).first()
     if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
-    page3_referralDownload = referral_data.page3_referralDownload if referral_data else {}
+   
+    # Safely get page4_referralRedeem from referral_json for the language
+    page3_referralDownload = {}
+    if referral_data.referral_json:
+        page3_referralDownload = referral_data.referral_json.get(lang, {}).get("page3_referralDownload", {})
 
     return jsonify({
         "status": "success",
@@ -160,7 +175,7 @@ def share_code(code):
 @app.route("/api/referral-redeem", methods=["POST"])
 @require_api_key
 def redeem_json():
-    lang = request.args.get("lang")  # still query param
+    lang = request.args.get("lang") or "en"  # default to 'en' if missing
 
     data_json = request.get_json(force=True)
     app_package_name = data_json.get("app_package_name")
@@ -172,7 +187,10 @@ def redeem_json():
     referral_data = ReferralData.objects(app_package_name=app_package_name).first()
     if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
-    page4_referralRedeem = referral_data.page4_referralRedeem if referral_data else {}
+    # Safely get page4_referralRedeem from referral_json for the language
+    page4_referralRedeem = {}
+    if referral_data.referral_json:
+        page4_referralRedeem = referral_data.referral_json.get(lang, {}).get("page4_referralRedeem", {})
 
     return jsonify({
         "status": "success",
@@ -189,7 +207,7 @@ def redeem_json():
 @app.route("/api/checkredeem", methods=["POST"])
 @require_api_key
 def check_redeem():
-    lang = request.args.get("lang")  # still query param
+    lang = request.args.get("lang") or "en"  # default to 'en' if missing
 
     data_json = request.get_json(force=True)
     app_package_name = data_json.get("app_package_name")
