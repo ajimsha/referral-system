@@ -70,7 +70,7 @@ def get_referral():
     if existing_redeem:
         referral_code = existing_redeem.code
     else:
-        referral_code = username[:4] + str(random.randint(1000, 9999))
+        referral_code = (username[:4] if len(username) >= 4 else username) + str(random.randint(1000, 9999))
         ReferDetails(
             app_package_name=app_package_name,
             user_id=user_id,
@@ -204,7 +204,8 @@ def check_redeem():
         app_package_name=app_package_name,
         user_id=user_id,
         code=code,
-        is_redeemed=1
+        is_redeemed=1,
+        created_at=datetime.utcnow()
     ).save()
 
     # 4. Increment redemptions count for code owner
