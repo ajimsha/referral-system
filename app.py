@@ -124,9 +124,9 @@ def referral_stats():
     if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
    
-    page2_referral_status = {}
+    page2_referralStatus = {}
     if referral_data.referral_json:
-        page2_referral_status = referral_data.referral_json.get(lang, {}).get("page2_referral_status", {})
+        page2_referralStatus = referral_data.referral_json.get(lang, {}).get("page2_referralStatus", {})
 
     return jsonify({
         "status": "success",
@@ -136,7 +136,7 @@ def referral_stats():
             "user_id": user_id,
             "username": username,
             "redemption_count": redemption_count,
-            "page2_referral_status": page2_referral_status
+            "page2_referralStatus": page2_referralStatus
         }
     }), 200
 
