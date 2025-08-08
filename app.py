@@ -63,7 +63,7 @@ def get_referral():
 
     # Check if referral data exists in ReferralData
 
-    referral_data = ReferralData.objects(app_package_name=app_package_name,isActive=True).first()
+    referral_data = ReferralData.objects(app_package_name=app_package_name).first()
     if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
     
