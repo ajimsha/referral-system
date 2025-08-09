@@ -24,5 +24,13 @@ class RedeemDetails(Document):
     is_redeemed = IntField(default=0)
     created_at = DateTimeField(default=datetime.utcnow)
 
+class App(Document):
+    app_package_name = StringField(required=True, unique=True)  # e.g., "com.example.app"
+    app_name = StringField(required=True)  # Display name of the app
+    description = StringField()  # Optional description
+    is_active = BooleanField(default=True)
+    created_at = DateTimeField(default=datetime.utcnow)
+    updated_at = DateTimeField(default=datetime.utcnow)
+
 
 

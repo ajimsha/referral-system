@@ -3,7 +3,7 @@ from flask_cors import CORS
 from datetime import datetime, timezone
 from db_config import create_app
 from functools import wraps
-from models import ReferralData, ReferDetails,RedeemDetails
+from models import ReferralData, ReferDetails,RedeemDetails,App
 import requests
 import json
 import pytz
@@ -283,10 +283,176 @@ def create_referral_data():
         "data": {
             "app_package_name": app_package_name,
             "referral_json": referral_json,
-            "is_active": is_active,
+            
+        }
+    }), 201
+
+
+
+
+
+@app.route("/api/admin/savereferraldata", methods=["POST"])
+@require_api_key
+def create_or_update_admin_referral_data():
+    data = request.get_json(force=True)
+
+    app_package_name = data.get("app_package_name")
+    referral_json = data.get("referral_json", {})
+    is_active = data.get("is_active", True)
+
+    if not app_package_name:
+        return jsonify({"status": "error", "message": "app_package_name is required"}), 400
+
+    # Check if ReferralData exists for this app_package_name
+    existing = ReferralData.objects(app_package_name=app_package_name).first()
+
+    if existing:
+        # Update existing record
+        existing.referral_json = referral_json
+        existing.is_active = is_active
+        existing.save()
+
+        return jsonify({
+            "status": "success",
+            "message": "ReferralData updated successfully",
+            "data": {
+                "app_package_name": existing.app_package_name,
+                "referral_json": existing.referral_json,
+                "is_active": existing.is_active,
+                "created_at": existing.created_at.isoformat()
+            }
+        }), 200
+
+    # Create new record
+    referral_data = ReferralData(
+        app_package_name=app_package_name,
+        referral_json=referral_json,
+        is_active=is_active,
+        created_at=datetime.utcnow()
+    )
+    referral_data.save()
+
+    return jsonify({
+        "status": "success",
+        "message": "ReferralData created successfully",
+        "data": {
+            "app_package_name": referral_data.app_package_name,
+            "referral_json": referral_data.referral_json,
+            "is_active": referral_data.is_active,
             "created_at": referral_data.created_at.isoformat()
         }
     }), 201
+
+
+
+
+@app.route("/api/admin/getreferraldata", methods=["GET"])
+@require_api_key
+def list_referral_data():
+    app_package_name = request.args.get("app_package_name")
+
+    if not app_package_name:
+        return jsonify({"status": "error", "message": "app_package_name is required"}), 400
+
+    # Fetch data for the given package name
+    referral_list = ReferralData.objects(app_package_name=app_package_name).order_by("-created_at")
+
+    if not referral_list:
+        return jsonify({"status": "error", "message": "No referral data found"}), 404
+
+    # Prepare output
+    data = []
+    for item in referral_list:
+        data.append({
+            "app_package_name": item.app_package_name,
+            "referral_json": item.referral_json
+        })
+
+    return jsonify({
+        "status": "success",
+        "data": data
+    }), 200
+
+
+
+@app.route("/api/admin/listapps", methods=["GET"])
+@require_api_key
+def list_apps():
+    app_package_name = request.args.get("app_package_name")
+
+    # Build query
+    query = {}
+    if app_package_name:
+        query["app_package_name"] = app_package_name
+
+    # Fetch apps
+    apps = App.objects(**query).order_by("-created_at")
+
+    if not apps:
+        return jsonify({"status": "error", "message": "No apps found"}), 404
+
+    # Prepare response data
+    data = []
+    for app_obj in apps:
+        data.append({
+            "app_package_name": app_obj.app_package_name,
+            "app_name": app_obj.app_name,
+            "description": app_obj.description,
+            "created_at": app_obj.created_at.isoformat(),
+            "updated_at": app_obj.updated_at.isoformat()
+        })
+
+    return jsonify({
+        "status": "success",
+        "data": data
+    }), 200
+
+
+
+
+@app.route("/api/admin/createapp", methods=["POST"])
+@require_api_key
+def create_app():
+    data = request.get_json(force=True)
+
+    app_package_name = data.get("app_package_name")
+    app_name = data.get("app_name")
+    description = data.get("description", "")
+
+    # Validate required fields
+    if not app_package_name:
+        return jsonify({"status": "error", "message": "app_package_name is required"}), 400
+    if not app_name:
+        return jsonify({"status": "error", "message": "app_name is required"}), 400
+
+    # Check if app already exists
+    existing = App.objects(app_package_name=app_package_name).first()
+    if existing:
+        return jsonify({"status": "error", "message": "App already exists with this app_package_name"}), 409
+
+    # Create and save app
+    app_obj = App(
+        app_package_name=app_package_name,
+        app_name=app_name,
+        description=description,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    app_obj.save()
+
+    return jsonify({
+        "status": "success",
+        "message": "App created successfully",
+        "data": {
+            "app_package_name": app_package_name,
+            "app_name": app_name,
+            "description": description,
+            "created_at": app_obj.created_at.isoformat(),
+            "updated_at": app_obj.updated_at.isoformat()
+        }
+    }), 201
+
+
 
 
 

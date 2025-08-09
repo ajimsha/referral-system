@@ -1,5 +1,5 @@
 from db_config import create_app  # db is now MongoEngine()
-from models import ReferDetails,ReferralData
+from models import ReferDetails,ReferralData,App
 
 app = create_app()
 
