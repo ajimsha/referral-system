@@ -475,8 +475,14 @@ def create_app():
 
     referral_json=create_refferel_data(app_name, app_description, language)
 
-    
+    referral_data = ReferralData(
+        app_package_name=app_package_name,
+        referral_json=referral_json,
+        created_at=datetime.utcnow()
+    )
+    referral_data.save()
 
+    
     # Create and save app
     app_obj = App(
         app_package_name=app_package_name,
