@@ -389,12 +389,22 @@ def list_referral_data():
 
     if not referral_list:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
+    
+
+    app_details = App.objects(app_package_name=app_package_name).first()
+    if not app_details:
+        return jsonify({"status": "error", "message": "Invalid App details"}), 404
+    app_name = app_details.app_name
+    app_description = app_details.description or ""
+    
 
     # Prepare output
     data = []
     for item in referral_list:
         data.append({
             "app_package_name": item.app_package_name,
+            "app_name": app_name,
+            "add_description": app_description,
             "referral_json": item.referral_json
         })
 
@@ -428,6 +438,8 @@ def list_apps():
             "app_package_name": app_obj.app_package_name,
             "app_name": app_obj.app_name,
             "description": app_obj.description,
+            "app_store_link": app_obj.app_store_link,
+            "play_store_link": app_obj.play_store_link,
             "created_at": app_obj.created_at.isoformat(),
             "updated_at": app_obj.updated_at.isoformat()
         })
@@ -448,6 +460,8 @@ def create_app():
     app_package_name = data.get("app_package_name")
     app_name = data.get("app_name")
     description = data.get("description", "")
+    play_store_link = data.get("play_store_link", "")
+    app_store_link = data.get("app_store_link", "")
 
     # Validate required fields
     if not app_package_name:
@@ -465,6 +479,8 @@ def create_app():
         app_package_name=app_package_name,
         app_name=app_name,
         description=description,
+        app_store_link = app_store_link,
+        play_store_link = play_store_link,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -477,6 +493,8 @@ def create_app():
             "app_package_name": app_package_name,
             "app_name": app_name,
             "description": description,
+            "app_store_link":app_store_link,
+            "play_store_link": play_store_link,
             "created_at": app_obj.created_at.isoformat(),
             "updated_at": app_obj.updated_at.isoformat()
         }
