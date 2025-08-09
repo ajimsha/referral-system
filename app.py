@@ -282,43 +282,6 @@ def check_redeem():
 
 
 
-@app.route("/api/savereferraldata", methods=["POST"])
-@require_api_key
-def create_referral_data():
-    data = request.get_json(force=True)
-
-    app_package_name = data.get("app_package_name")
-    referral_json = data.get("referral_json", {})
-    is_active = data.get("is_active", True)
-
-    if not app_package_name:
-        return jsonify({"status": "error", "message": "app_package_name is required"}), 400
-
-    # Check if ReferralData for this app_package_name already exists
-    existing = ReferralData.objects(app_package_name=app_package_name).first()
-    if existing:
-        return jsonify({"status": "error", "message": "ReferralData already exists for this app_package_name"}), 409
-
-    referral_data = ReferralData(
-        app_package_name=app_package_name,
-        referral_json=referral_json,
-        is_active=is_active,
-        created_at=datetime.utcnow()
-    )
-    referral_data.save()
-
-    return jsonify({
-        "status": "success",
-        "message": "ReferralData created successfully",
-        "data": {
-            "app_package_name": app_package_name,
-            "referral_json": referral_json,
-            
-        }
-    }), 201
-
-
-
 
 
 @app.route("/api/admin/savereferraldata", methods=["POST"])
