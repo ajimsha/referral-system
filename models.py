@@ -28,6 +28,8 @@ class App(Document):
     app_package_name = StringField(required=True, unique=True)  # e.g., "com.example.app"
     app_name = StringField(required=True)  # Display name of the app
     description = StringField()  # Optional description
+    app_store_link = StringField()  # Optional 
+    play_store_link = StringField()  # Optional 
     is_active = BooleanField(default=True)
     created_at = DateTimeField(default=datetime.utcnow)
     updated_at = DateTimeField(default=datetime.utcnow)

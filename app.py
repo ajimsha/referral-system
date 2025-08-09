@@ -73,9 +73,13 @@ def get_referral():
 
     # Check if the user already has a referral code in ReferDetails
     existing_redeem = ReferDetails.objects(app_package_name=app_package_name, user_id=user_id).first()
-
+    current_redemptions=0
+    pending_redemptions=5
     if existing_redeem:
         referral_code = existing_redeem.code
+        current_redemptions = existing_redeem.redemptions
+        pending_redemptions = (5 - existing_redeem.redemptions)
+        
     else:
         referral_code = (username[:4] if len(username) >= 4 else username) + str(random.randint(1000, 9999))
         ReferDetails(
@@ -94,6 +98,9 @@ def get_referral():
         "data": {
             "page1_referralPromote": page1_referralPromote,
             "referral_code": referral_code,
+            "referrer_name": username,
+            "current_redemptions": current_redemptions,
+            "pending_redemptions": pending_redemptions,
             "referral_url": referral_url
         }
     }), 200
@@ -116,8 +123,11 @@ def referral_stats():
         return jsonify({"status": "error", "message": "Missing parameters"}), 400
     
     # Get redemption count (last redeem for the user)
-    last_redeem = ReferDetails.objects(app_package_name=app_package_name, user_id=user_id).order_by('-created_at').first()
-    redemption_count = last_redeem.redemptions if last_redeem else 0
+    existing_redeem = ReferDetails.objects(app_package_name=app_package_name, user_id=user_id).order_by('-created_at').first()
+    referral_code = existing_redeem.code
+    current_redemptions = existing_redeem.redemptions if existing_redeem else 0
+    pending_redemptions = (5 - existing_redeem.redemptions)
+
 
     # Get page2_referral_status JSON (only one per app)
     referral_data = ReferralData.objects(app_package_name=app_package_name).first()
@@ -134,8 +144,11 @@ def referral_stats():
         "data": {
             "app_package_name": app_package_name,
             "user_id": user_id,
-            "username": username,
-            "redemption_count": redemption_count,
+            "referral_code": referral_code,
+            "referrer_name": username,
+            "current_redemptions": current_redemptions,
+            "pending_redemptions": pending_redemptions,
+            "target_redemptions": 5,
             "page2_referralStatus": page2_referralStatus
         }
     }), 200
@@ -151,8 +164,20 @@ def share_code(code):
         return jsonify({"status": "error", "message": "Invalid referral code"}), 404
 
     lang = redeem.lang or "en"  # fetch lang from ReferDetails, default to 'en' if missing
+    referral_code = redeem.code
+    username = redeem.user_name
+    app_package_name = redeem.app_package_name
+    
 
-    referral_data = ReferralData.objects(app_package_name=redeem.app_package_name).first()
+    app_details = App.objects(app_package_name=app_package_name).first()
+    if not app_details:
+        return jsonify({"status": "error", "message": "Invalid App details"}), 404
+    app_name = app_details.app_name
+    play_store_link = app_details.play_store_link or ""
+    app_store_link = app_details.app_store_link or ""
+
+
+    referral_data = ReferralData.objects(app_package_name=app_package_name).first()
     if not referral_data:
         return jsonify({"status": "error", "message": "No referral data found"}), 404
    
@@ -165,6 +190,11 @@ def share_code(code):
         "status": "success",
         "message": "Share data fetched",
         "data": {
+            "app_name": app_name,
+            "referrer_name": username,
+            "referral_code": referral_code,
+            "play_store_link": play_store_link,
+            "app_store_link": app_store_link,
             "page3_referralDownload": page3_referralDownload,
         }
     }), 200
